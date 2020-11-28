@@ -2,20 +2,36 @@
 
 module Main where
 
-
-
-
-import           Network.HTTP.Simple            ( httpBS, getResponseBody )               
+import           Network.HTTP.Simple          
 import qualified Data.ByteString.Char8         as BS
+import Data.Aeson
+import Control.Monad
+import Control.Applicative
 
+data Token = String
 
-fetchJSON :: IO BS.ByteString
+--data Request = BS.ByteString
+
+data TelegramResponse a = TelegramResponse 
+    { responseOk :: Bool
+    , responseDescription :: Maybe String
+    , responseResult :: Maybe a
+    } deriving Show
+
+instance FromJSON a => FromJSON (TelegramResponse a) where
+    parseJSON (Object v) = TelegramResponse <$>
+                           v .: "ok" <*>
+                           v .:? "description" <*>
+                           v .:? "result"
+    parseJSON _          = mzero
+
+fetchJSON :: IO (TelegramResponse a)
 fetchJSON = do
-  res <- httpBS "https://api.telegram.org/bot1421138697:AAHfmKgs38ODbldkqE3jlGEikQlaNuXsOXA/getUpdates"
+  res <- httpJSON "https://api.telegram.org/bot1421138697:AAHfmKgs38ODbldkqE3jlGEikQlaNuXsOXA/getUpdates"
   return (getResponseBody res)
 
 
-main :: IO ()
+main :: IO (TelegramResponse a)
 main = do
   json <- fetchJSON
   BS.putStrLn json
