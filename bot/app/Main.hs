@@ -27,7 +27,7 @@ instance FromJSON a => FromJSON (TelegramResponse a) where
 
 fetchJSON :: IO (TelegramResponse a)
 fetchJSON = do
-  res <- httpJSON "https://api.telegram.org/bot1421138697:AAHfmKgs38ODbldkqE3jlGEikQlaNuXsOXA/getUpdates"
+  res <- httpJSON "https://api.telegram.org/"
   return (getResponseBody res)
 
 
