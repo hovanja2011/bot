@@ -25,6 +25,7 @@ dependencies:
   - text
   - http-conduit
   - aeson 
+  - url
 
 library:
   source-dirs: src
