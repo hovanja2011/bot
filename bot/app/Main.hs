@@ -2,52 +2,28 @@
 
 module Main where
 
-import           Network.HTTP.Simple          
+import           Network.HTTP.Simple            ( httpJSON, httpLBS, httpBS, getResponseBody )
+import           Data.Aeson                     
 import qualified Data.ByteString.Char8         as BS
-import           Data.Aeson
-import           Data.Maybe
-import           Control.Monad
-import           Control.Applicative
-import           Network.URL
+import           Data.Text                      ( Text )
+import qualified Data.ByteString.Internal as S
 
-data User = User
-    { userId :: Int
-    , userFirstName :: String
-    , userLastName :: Maybe String
-    , userUsername :: Maybe String
-    } deriving Show
+data User = User {
+    user_id :: Int
+  , user_is_bot :: Bool
+} deriving (Show)
 
 instance FromJSON User where
-    parseJSON (Object v) = User <$>
-                           v .: "id" <*>
-                           v .: "first_name" <*>
-                           v .:? "last_name" <*>
-                           v .:? "username"
-    parseJSON _          = mzero
+    parseJSON = withObject "User" $ \v -> User
+        <$> v .: "id"
+        <*> v .: "is_bot"
 
-data Token = T String
+fetchJSON :: IO BS.ByteString
+fetchJSON = do
+  res <- httpLBS "https://api.telegram.org/bot1421138697:AAHfmKgs38ODbldkqE3jlGEikQlaNuXsOXA/getMe"
+  return (getResponseBody res)
 
-data TelegramResponse a = TelegramResponse
-    { responseOk :: Bool
-    , responseDescription :: Maybe String
-    , responseResult :: Maybe a
-    } deriving Show
-
-baseURL :: URL
-baseURL = fromJust $ importURL "https://api.telegram.org"
-
-getMeUrl :: Token -> URL -> URL
-getMeUrl (T token) url= url { url_path = url_path' ++ "/bot" ++ token ++ "/getMe"}
-    where url_path' = url_path url
-
-getMe:: Token -> IO (TelegramResponse User)
-getMe (T token) =fromJust $ makeRequest ( getMeUrl token baseURL)
-
-makeRequest :: FromJSON a => URL -> IO (Maybe a)
-makeRequest = liftM decode . simpleHttp . exportURL
-
-main :: IO (TelegramResponse User)
+main :: IO ()
 main = do
-  putStrLn "give me your token"
-  token <- getLine
-  putStrLn $ getMe token
+  json <- fetchJSON
+  print ( json)
