@@ -2,7 +2,7 @@
 
 module Main where
 
-import           Network.HTTP.Simple            ( httpJSON, httpLBS, httpBS, getResponseBody )
+import           Network.HTTP.Simple            ( httpBS, getResponseBody )
 import           Data.Aeson                     
 import qualified Data.ByteString.Char8         as BS
 import           Data.Text                      ( Text )
@@ -20,7 +20,7 @@ instance FromJSON User where
 
 fetchJSON :: IO BS.ByteString
 fetchJSON = do
-  res <- httpLBS "https://api.telegram.org/bot1421138697:AAHfmKgs38ODbldkqE3jlGEikQlaNuXsOXA/getMe"
+  res <- httpBS "https://api.telegram.org/bot1421138697:AAHfmKgs38ODbldkqE3jlGEikQlaNuXsOXA/getMe"
   return (getResponseBody res)
 
 main :: IO ()
