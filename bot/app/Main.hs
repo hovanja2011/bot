@@ -1,29 +1,59 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Main where
 
-import           Network.HTTP.Simple            ( httpBS, getResponseBody )
-import           Data.Aeson                     
-import qualified Data.ByteString.Char8         as BS
-import           Data.Text                      ( Text )
-import qualified Data.ByteString.Internal as S
+import qualified Data.ByteString as B
+import qualified Data.ByteString.Char8 as B8
+import qualified Data.ByteString.Lazy as L
+import qualified Data.ByteString.Lazy.Char8 as L8
+import Network.HTTP.Simple
+import Data.Aeson
+import Data.Text as T
+import GHC.Generics
+-- everything for making request
+--begin
+token :: B8.ByteString
+token = "bot1421138697:AAHfmKgs38ODbldkqE3jlGEikQlaNuXsOXA"
+
+method :: B8.ByteString
+method = "/getMe"
+
+makePath :: B8.ByteString -> B8.ByteString -> B8.ByteString
+makePath = B8.append
+
+tHost :: B8.ByteString
+tHost = "api.telegram.org"
+
+tPath :: B8.ByteString
+tPath = makePath token method
+
+buildRequest :: B8.ByteString -> B8.ByteString -> Request
+buildRequest host path = setRequestHost host
+  $ setRequestPath path
+  $ setRequestSecure True
+  $ setRequestPort 443
+  $ defaultRequest
+
+request :: Request
+request = buildRequest tHost tPath
+--end
 
 data User = User {
-    user_id :: Int
-  , user_is_bot :: Bool
-} deriving (Show)
+    user_id         :: Int ,
+    user_is_bot     :: Bool ,
+    user_first_name :: String
+} deriving (Show,Generic)
 
 instance FromJSON User where
-    parseJSON = withObject "User" $ \v -> User
-        <$> v .: "id"
-        <*> v .: "is_bot"
-
-fetchJSON :: IO BS.ByteString
-fetchJSON = do
-  res <- httpBS "https://api.telegram.org/bot1421138697:AAHfmKgs38ODbldkqE3jlGEikQlaNuXsOXA/getMe"
-  return (getResponseBody res)
+    parseJSON (Object v) =
+        User <$> v .: "id"
+             <*> v .: "is_bot"
+             <*> v .: "first_name"
 
 main :: IO ()
 main = do
-  json <- fetchJSON
-  print ( json)
+    response <- httpLBS request
+    print (getResponseBody response)
+--https://api.telegram.org/bot1421138697:AAHfmKgs38ODbldkqE3jlGEikQlaNuXsOXA/getMe
+
