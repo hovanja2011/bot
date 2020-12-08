@@ -9,6 +9,7 @@ import qualified Data.ByteString.Lazy as L
 import qualified Data.ByteString.Lazy.Char8 as L8
 import Network.HTTP.Simple
 import Data.Aeson
+import Data.Maybe
 import Data.Text as T
 import GHC.Generics
 -- everything for making request
@@ -40,20 +41,23 @@ request = buildRequest tHost tPath
 --end
 
 data User = User {
-    user_id         :: Int ,
-    user_is_bot     :: Bool ,
-    user_first_name :: String
+    status         :: Bool 
 } deriving (Show,Generic)
 
 instance FromJSON User where
     parseJSON (Object v) =
-        User <$> v .: "id"
-             <*> v .: "is_bot"
-             <*> v .: "first_name"
+        User <$> v .: "ok"
+
+getUser :: Request -> IO (User)
+getUser request = do 
+  t <- httpLBS request
+  tt <- return (getResponseBody t)
+  ttt <- return (decode tt)
+  return (fromJust ttt)
 
 main :: IO ()
 main = do
-    response <- httpLBS request
-    print (getResponseBody response)
+    user <- getUser request
+    print (user )
 --https://api.telegram.org/bot1421138697:AAHfmKgs38ODbldkqE3jlGEikQlaNuXsOXA/getMe
 
