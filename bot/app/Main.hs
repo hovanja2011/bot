@@ -41,19 +41,22 @@ request = buildRequest tHost tPath
 --end
 
 data User = User {
-    status         :: Bool 
-} deriving (Show,Generic)
+    user_id         :: Int ,
+    user_is_bot     :: Bool ,
+    user_first_name :: String } deriving (Show)
 
 instance FromJSON User where
-    parseJSON (Object v) =
-        User <$> v .: "ok"
+    parseJSON = withObject "user" $ \o -> do
+      result <- o.: "result"
+      user_id <- result .: "id"
+      user_is_bot <- result .: "is_bot"
+      user_first_name <- result .: "first_name"
+      return (User user_id user_is_bot user_first_name )
 
 getUser :: Request -> IO (User)
 getUser request = do 
-  t <- httpLBS request
-  tt <- return (getResponseBody t)
-  ttt <- return (decode tt)
-  return (fromJust ttt)
+  t <- httpJSON request
+  return (getResponseBody t)
 
 main :: IO ()
 main = do
