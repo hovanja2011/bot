@@ -10,15 +10,15 @@ import qualified Data.ByteString.Lazy.Char8 as L8
 import Network.HTTP.Simple
 import Data.Aeson
 import Data.Maybe
-import Data.Text as T
+--import Data.Text as T
 import GHC.Generics
+
 -- everything for making request
---begin
-token :: B8.ByteString
+token :: B8.ByteString 
 token = "bot1421138697:AAHfmKgs38ODbldkqE3jlGEikQlaNuXsOXA"
 
-method :: B8.ByteString
-method = "/getMe"
+method_getMe :: B8.ByteString
+method_getMe = "/getMe"
 
 makePath :: B8.ByteString -> B8.ByteString -> B8.ByteString
 makePath = B8.append
@@ -26,8 +26,8 @@ makePath = B8.append
 tHost :: B8.ByteString
 tHost = "api.telegram.org"
 
-tPath :: B8.ByteString
-tPath = makePath token method
+tPath_getMe :: B8.ByteString
+tPath_getMe = makePath token method_getMe
 
 buildRequest :: B8.ByteString -> B8.ByteString -> Request
 buildRequest host path = setRequestHost host
@@ -36,10 +36,11 @@ buildRequest host path = setRequestHost host
   $ setRequestPort 443
   $ defaultRequest
 
-request :: Request
-request = buildRequest tHost tPath
+request_getMe :: Request
+request_getMe = buildRequest tHost tPath_getMe
 --end
 
+-- here I parse JSON User
 data User = User {
     user_id         :: Int ,
     user_is_bot     :: Bool ,
@@ -57,10 +58,33 @@ getUser :: Request -> IO (User)
 getUser request = do 
   t <- httpJSON request
   return (getResponseBody t)
+-- end
+
+--here I send message to User
+message_help :: B8.ByteString
+message_help = "Description about this bot"
+
+method_sendHelp :: Int -> B8.ByteString
+method_sendHelp id = makePath (makePath "/sendMessage?chat_id=" (B8.pack.show $ id)) (makePath "&text=" message_help)
+
+tPath_sendHelp :: Int -> B8.ByteString
+tPath_sendHelp id = makePath token (method_sendHelp id)
+
+request_sendHelp :: Int -> Request
+request_sendHelp id = buildRequest tHost (tPath_sendHelp id)
+
+get_message_response :: Int-> IO (B8.ByteString)
+get_message_response id = do
+  t <- httpBS (request_sendHelp id)
+  return (getResponseBody t)
+--Problem. I send message from bot to bot!
+--end
 
 main :: IO ()
 main = do
-    user <- getUser request
-    print (user )
+    user <- getUser request_getMe
+    id <- return (user_id user)
+    body <- get_message_response id
+    print (body )
 --https://api.telegram.org/bot1421138697:AAHfmKgs38ODbldkqE3jlGEikQlaNuXsOXA/getMe
 
