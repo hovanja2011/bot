@@ -13,6 +13,11 @@ import Data.Maybe
 --import Data.Text as T
 import GHC.Generics
 
+--something from fizruk path
+data Action = NoAction
+data Model 
+--end
+
 -- everything for making request
 token :: B8.ByteString 
 token = "bot1421138697:AAHfmKgs38ODbldkqE3jlGEikQlaNuXsOXA"
