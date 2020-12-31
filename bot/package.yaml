@@ -23,8 +23,10 @@ dependencies:
   - base 
   - aeson 
   - http-conduit 
+  - url
   - bytestring 
   - text
+  - utf8-string
   
 library:
   source-dirs: src
