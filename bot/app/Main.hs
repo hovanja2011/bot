@@ -79,11 +79,29 @@ instance FromJSON User where
                          o.: "first_name"
   parseJSON _          = mzero
 
+addParamMessage :: String -> Int -> URL -> URL
+addParamMessage ss usid url = add_param ( add_param url ("chat_id", show usid) ) ("text",ss) 
+
+sendMessageURL :: Token -> Int -> String -> URL
+sendMessageURL token usid ss =  addParamMessage ss usid $ addPath "/sendMessage" $ addToken token baseURL
+
+sendMessage :: Token -> Int -> String -> IO (Maybe (TelegramResponse Message))
+sendMessage token usid ss = makeRequest (sendMessageURL token usid ss )
+
 getMessageFromResponse :: TelegramResponse [Update] -> String
 getMessageFromResponse = fromJust.messageText.fromJust.updateMessage.last.fromJust.responseResult 
 
+getIdFromResponse :: TelegramResponse [Update] -> Int
+getIdFromResponse = userId.fromJust.messageFrom.fromJust.updateMessage.last.fromJust.responseResult 
+
+  
 main :: IO ()
 main = do
   token <- return ("1421138697:AAHfmKgs38ODbldkqE3jlGEikQlaNuXsOXA")
   upds <- getUpdates token
-  print (getMessageFromResponse.fromJust $ upds)
+  mssg <- return (getMessageFromResponse.fromJust $ upds)
+  usid <- return (getIdFromResponse.fromJust $ upds)
+  res <- sendMessage token usid mssg
+  print ("ok?")
+
+  
