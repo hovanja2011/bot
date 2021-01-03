@@ -82,6 +82,9 @@ instance FromJSON User where
 addParamMessage :: String -> Int -> URL -> URL
 addParamMessage ss usid url = add_param ( add_param url ("chat_id", show usid) ) ("text",ss) 
 
+addParam :: String -> String -> URL -> URL
+addParam key value url = add_param url (key, value) 
+
 sendMessageURL :: Token -> Int -> String -> URL
 sendMessageURL token usid ss =  addParamMessage ss usid $ addPath "/sendMessage" $ addToken token baseURL
 
@@ -94,14 +97,20 @@ getMessageFromResponse = fromJust.messageText.fromJust.updateMessage.last.fromJu
 getIdFromResponse :: TelegramResponse [Update] -> Int
 getIdFromResponse = userId.fromJust.messageFrom.fromJust.updateMessage.last.fromJust.responseResult 
 
+
+run :: Token -> String -> IO ()
+run token ss = do
+  upds <- makeRequest (addParam "timeout" "20" (getUpdatesURL token))
+  mssg <- return (getMessageFromResponse.fromJust $ upds)
+  usid <- return (getIdFromResponse.fromJust $ upds)
+  if mssg /= ss 
+  then do
+    res <- sendMessage token usid mssg 
+    run token mssg
+  else 
+    run token mssg
   
 main :: IO ()
 main = do
   token <- return ("1421138697:AAHfmKgs38ODbldkqE3jlGEikQlaNuXsOXA")
-  upds <- getUpdates token
-  mssg <- return (getMessageFromResponse.fromJust $ upds)
-  usid <- return (getIdFromResponse.fromJust $ upds)
-  res <- sendMessage token usid mssg
-  print ("ok?")
-
-  
+  run token ""
