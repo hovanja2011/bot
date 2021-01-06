@@ -11,26 +11,7 @@ import Data.ByteString.Lazy.UTF8 (toString)
 
 type Token = String
 
-baseURL :: URL
-baseURL = fromJust.importURL $ "https://api.telegram.org"
-
-addPath :: String -> URL -> URL
-addPath path url = url {url_path = oldPath++path} where oldPath = url_path url
-
-addToken :: Token -> URL -> URL
-addToken token url = addPath token $ addPath "bot" baseURL   
-
-makeRequest :: FromJSON a => URL -> IO (Maybe a)
-makeRequest = liftM decode.simpleHttp.exportURL 
-
---Updates block
-getUpdatesURL :: Token -> URL
-getUpdatesURL token = addPath "/getUpdates" $ addToken token baseURL
-
-getUpdates :: Token -> IO (Maybe (TelegramResponse [Update]))
-getUpdates token = makeRequest.getUpdatesURL $ token 
---
-
+--Response data
 data TelegramResponse a = TelegramResponse {
   responseStatus :: Bool,
   responseResult :: Maybe a
@@ -78,39 +59,80 @@ instance FromJSON User where
                          o.: "is_bot" <*>
                          o.: "first_name"
   parseJSON _          = mzero
+--end
 
+--work with URL
+domain :: URL
+domain = fromJust.importURL $ "https://api.telegram.org"
+
+addPath :: String -> URL -> URL
+addPath path url = url {url_path = oldPath++path} where oldPath = url_path url
+
+addToken :: Token -> URL -> URL
+addToken token url = addPath ("bot" ++ token)  domain    
+
+makeRequest :: FromJSON a => URL -> IO (Maybe a)
+makeRequest = liftM decode.simpleHttp.exportURL 
+
+--  params
 addParamMessage :: String -> Int -> URL -> URL
-addParamMessage ss usid url = add_param ( add_param url ("chat_id", show usid) ) ("text",ss) 
+addParamMessage ss usid url = addParams [("chat_id", show usid), ("text",ss) ] url
 
-addParam :: String -> String -> URL -> URL
-addParam key value url = add_param url (key, value) 
+addParam :: (String, String) -> URL -> URL
+addParam keyValue url = add_param url keyValue
+
+addParams :: [(String,String)] -> URL -> URL
+addParams [] url = url
+addParams (x:xs) url = addParams xs $ addParam x url
+--  end params
 
 sendMessageURL :: Token -> Int -> String -> URL
-sendMessageURL token usid ss =  addParamMessage ss usid $ addPath "/sendMessage" $ addToken token baseURL
+sendMessageURL token usid ss =  addParamMessage ss usid $ addPath "/sendMessage" $ addToken token domain 
 
 sendMessage :: Token -> Int -> String -> IO (Maybe (TelegramResponse Message))
 sendMessage token usid ss = makeRequest (sendMessageURL token usid ss )
+--end
 
-getMessageFromResponse :: TelegramResponse [Update] -> String
-getMessageFromResponse = fromJust.messageText.fromJust.updateMessage.last.fromJust.responseResult 
+--Updates block
+getUpdatesURL :: Token -> URL
+getUpdatesURL token = addPath "/getUpdates" $ addToken token domain 
 
-getIdFromResponse :: TelegramResponse [Update] -> Int
-getIdFromResponse = userId.fromJust.messageFrom.fromJust.updateMessage.last.fromJust.responseResult 
+getUpdates :: Token -> IO (Maybe (TelegramResponse [Update]))
+getUpdates token = makeRequest.getUpdatesURL $ token 
+--end
 
+getlastMessage :: TelegramResponse [Update] -> String
+getlastMessage = fromJust.messageText.fromJust.updateMessage.last.fromJust.responseResult 
+
+getId :: TelegramResponse [Update] -> Int
+getId = userId.fromJust.messageFrom.fromJust.updateMessage.last.fromJust.responseResult 
+
+react :: String -> String -> Reaction String
+react ss mssg = if mssg==ss then NothingNew else
+  case mssg of
+  "help"    -> NewMessage "Hi, I'm orso bot"
+  "break"   -> Stop
+  otherwise -> NewMessage mssg
+
+data Reaction a = NothingNew |Stop |NewMessage a
+  deriving Show
 
 run :: Token -> String -> IO ()
 run token ss = do
-  upds <- makeRequest (addParam "timeout" "20" (getUpdatesURL token))
-  mssg <- return (getMessageFromResponse.fromJust $ upds)
-  usid <- return (getIdFromResponse.fromJust $ upds)
-  if mssg /= ss 
-  then do
-    res <- sendMessage token usid mssg 
-    run token mssg
-  else 
-    run token mssg
-  
+  upd  <- getUpdates token
+  mssg <- return $ getlastMessage.fromJust $ upd
+  text <- return $ react ss mssg
+  usid <- return $ getId.fromJust $ upd 
+  case text of
+    Stop -> putStrLn "we are finished"
+    NothingNew -> run token mssg
+    NewMessage s -> do
+      kek <- sendMessage token usid s
+      run token mssg     
+
 main :: IO ()
 main = do
-  token <- return ("1421138697:AAHfmKgs38ODbldkqE3jlGEikQlaNuXsOXA")
-  run token ""
+  token <- return ("1421138697:AAHfmKgs38ODbldkqE3jlGEikQlaNuXsOXA" )  
+  upd   <- getUpdates token
+  mssg  <- return $ getlastMessage.fromJust $ upd
+  run token mssg
